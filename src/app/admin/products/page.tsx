@@ -156,13 +156,13 @@ export default function AdminProductsPage() {
                   <td className="px-4 py-3">
                     <span className="font-medium text-gray-900 line-clamp-2 max-w-xs">{p.name}</span>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs font-mono">{p.sku ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500">{p.category?.name ?? '—'}</td>
-                  <td className="px-4 py-3 font-medium">{p.price.toLocaleString('ru')} ₽</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs font-mono">{p.sku ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-700">{p.category?.name ?? '—'}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-900">{p.price.toLocaleString('ru')} ₽</td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => toggleFlag(p.id, 'isHit', p.isHit)}
-                      className={`transition ${p.isHit ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-300'}`}
+                      className={`transition ${p.isHit ? 'text-yellow-500' : 'text-gray-500 hover:text-yellow-500'}`}
                       title="Хит продаж"
                     >
                       <Star size={18} fill={p.isHit ? 'currentColor' : 'none'} />
@@ -171,19 +171,19 @@ export default function AdminProductsPage() {
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => toggleFlag(p.id, 'isNew', p.isNew)}
-                      className={`transition ${p.isNew ? 'text-pink-400' : 'text-gray-200 hover:text-pink-300'}`}
+                      className={`transition ${p.isNew ? 'text-pink-500' : 'text-gray-500 hover:text-pink-500'}`}
                       title="Новинка"
                     >
                       <Sparkles size={18} fill={p.isNew ? 'currentColor' : 'none'} />
                     </button>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-block w-2 h-2 rounded-full ${p.inStock ? 'bg-green-400' : 'bg-gray-300'}`} />
+                    <span className={`inline-block w-2.5 h-2.5 rounded-full ${p.inStock ? 'bg-green-500' : 'bg-gray-500'}`} title={p.inStock ? 'В наличии' : 'Нет в наличии'} />
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => toggleFlag(p.id, 'isVisible', p.isVisible ?? true)}
-                      className={`transition ${(p.isVisible ?? true) ? 'text-blue-400' : 'text-gray-200 hover:text-blue-300'}`}
+                      className={`transition ${(p.isVisible ?? true) ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
                       title={(p.isVisible ?? true) ? 'Скрыть с витрины' : 'Показать на витрине'}
                     >
                       {(p.isVisible ?? true) ? <Eye size={18} /> : <EyeOff size={18} />}
