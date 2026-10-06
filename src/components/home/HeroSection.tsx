@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { getOccasions } from '@/lib/supabase'
 import OccasionsList from './OccasionsList'
 import USPList from './USPList'
-import { Search } from 'lucide-react'
 
 export default async function HeroSection() {
   const occasions = await getOccasions().catch(() => [])
@@ -15,13 +14,6 @@ export default async function HeroSection() {
             Доставка цветов по Санкт-Петербургу
           </p>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <Link
-              href="/catalog"
-              className="flex items-center gap-1 border border-rose-300 bg-white/80 text-rose-600 px-2.5 py-1 rounded-full text-xs font-bold hover:bg-white transition-colors"
-            >
-              <Search size={13} />
-              Поиск
-            </Link>
             <Link
               href="/catalog"
               className="bg-rose-500 text-white px-2.5 py-1 rounded-full text-xs font-bold hover:bg-rose-600 transition-colors shadow-md"
