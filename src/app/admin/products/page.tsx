@@ -96,24 +96,24 @@ export default function AdminProductsPage() {
           placeholder="Поиск по артикулу или названию..."
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1) }}
-          className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-400"
         />
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <select value={inStock} onChange={e => { setInStock(e.target.value); setPage(1) }} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+        <select value={inStock} onChange={e => { setInStock(e.target.value); setPage(1) }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white">
           <option value="">Наличие: все</option><option value="true">В наличии</option><option value="false">Нет в наличии</option>
         </select>
-        <select value={isVisible} onChange={e => { setIsVisible(e.target.value); setPage(1) }} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+        <select value={isVisible} onChange={e => { setIsVisible(e.target.value); setPage(1) }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white">
           <option value="">Видимость: все</option><option value="true">Видна</option><option value="false">Не видна</option>
         </select>
-        <select value={isHit} onChange={e => { setIsHit(e.target.value); setPage(1) }} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+        <select value={isHit} onChange={e => { setIsHit(e.target.value); setPage(1) }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white">
           <option value="">Хит: все</option><option value="true">Хит</option><option value="false">Не хит</option>
         </select>
-        <select value={isNew} onChange={e => { setIsNew(e.target.value); setPage(1) }} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+        <select value={isNew} onChange={e => { setIsNew(e.target.value); setPage(1) }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white">
           <option value="">Новинка: все</option><option value="true">Новинка</option><option value="false">Не новинка</option>
         </select>
-        <select value={categoryId} onChange={e => { setCategoryId(e.target.value); setPage(1) }} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+        <select value={categoryId} onChange={e => { setCategoryId(e.target.value); setPage(1) }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white">
           <option value="">Категория: все</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
