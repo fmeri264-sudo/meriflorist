@@ -1,65 +1,88 @@
-import Image from "next/image";
+import HeroSection from '@/components/home/HeroSection'
+import HowWeWork from '@/components/home/HowWeWork'
+import FaqSection from '@/components/home/FaqSection'
+import AdvantagesSection from '@/components/home/AdvantagesSection'
+import ReviewsSection from '@/components/home/ReviewsSection'
+import ProductsSection from '@/components/home/ProductsSection'
+import BlogSection from '@/components/home/BlogSection'
+import Link from 'next/link'
+import Image from 'next/image'
+import { getHomeSections, getProducts, getSiteReviews, getPinnedProducts, getCategories } from '@/lib/supabase'
 
-export default function Home() {
+export default async function HomePage() {
+  const [sections, reviews, topProducts, pinnedProducts, categories] = await Promise.all([
+    getHomeSections().catch(() => []),
+    getSiteReviews().catch(() => []),
+    getProducts({ inStock: true, limit: 60 }).catch(() => []),
+    getPinnedProducts().catch(() => []),
+    getCategories().catch(() => []),
+  ])
+
+  const topIds = new Set(topProducts.map(p => p.id))
+  const allProducts = [...topProducts, ...pinnedProducts.filter(p => !topIds.has(p.id))]
+
+  function getSection(sectionId: number, type: string, config: Record<string, unknown>) {
+    if (type === 'reviews' || type === 'advantages' || type === 'blog') return []
+    const limit = (config.limit as number) || 0
+    const pinnedIds = (config.pinnedProductIds as number[]) ?? []
+
+    const products = pinnedIds.length > 0
+      ? pinnedIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean) as typeof allProducts
+      : allProducts.filter(p => p.sectionIds?.includes(sectionId))
+
+    return limit > 0 ? products.slice(0, limit) : products
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    <>
+      <HeroSection />
+
+      {/* Категории */}
+      {categories.length > 0 && (
+        <section className="py-6 md:py-14 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {categories.map(cat => (
+                <Link key={cat.slug} href={`/catalog?category=${cat.slug}`}
+                  className="relative aspect-square rounded-2xl overflow-hidden group">
+                  {cat.image ? (
+                    <Image src={cat.image} alt={cat.name} fill sizes="(max-width:640px) 50vw,(max-width:1024px) 33vw,25vw"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                  ) : (
+                    <div className="absolute inset-0 bg-rose-100" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-900/55 via-rose-900/10 to-transparent group-hover:from-stone-900/65 group-hover:via-rose-900/15 transition-colors duration-300" />
+                  <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg md:text-xl text-center px-3 uppercase tracking-wide drop-shadow">
+                    {cat.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Динамические секции из БД */}
+      {await Promise.all(sections.map(async s => {
+        if (s.type === 'advantages') {
+          const items = (s.config.items as { icon: string; title: string; text: string }[]) ?? []
+          return <AdvantagesSection key={s.id} title={s.title} items={items} />
+        }
+        if (s.type === 'reviews') {
+          return <ReviewsSection key={s.id} title={s.title} reviews={reviews} />
+        }
+        if (s.type === 'blog') return <BlogSection key={s.id} title={s.title} />
+        const products = getSection(s.id, s.type, s.config)
+        if (!products.length) return null
+        return (
+          <ProductsSection key={s.id} title={s.title} subtitle={s.subtitle}
+            products={products} linkUrl={s.linkUrl} linkText={s.linkText}
+            bannerUrl={s.bannerUrl} highlight={s.type === 'bouquet_of_day'} />
+        )
+      }))}
+
+      <HowWeWork />
+      <FaqSection />
+    </>
+  )
 }
