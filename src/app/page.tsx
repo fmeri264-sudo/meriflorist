@@ -13,7 +13,9 @@ export default async function HomePage() {
   const [sections, reviews, topProducts, pinnedProducts, categories] = await Promise.all([
     getHomeSections().catch(() => []),
     getSiteReviews().catch(() => []),
-    getProducts({ inStock: true, limit: 60 }).catch(() => []),
+    // Загружаем весь доступный каталог, чтобы вручную закрепленные товары
+    // не терялись из-за лимита первых 60 карточек.
+    getProducts({ inStock: true, limit: 700 }).catch(() => []),
     getPinnedProducts().catch(() => []),
     getCategories().catch(() => []),
   ])
