@@ -5,9 +5,11 @@ import { X, Minus, Plus, ShoppingBag } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useEffect } from 'react'
 
 export default function CartSidebar() {
   const { items, isOpen, closeCart, removeItem, updateQty, total } = useCartStore()
+  useEffect(() => { void useCartStore.persist.rehydrate() }, [])
 
   if (!isOpen) return null
 

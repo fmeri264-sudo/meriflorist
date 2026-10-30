@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { customerPhoneVariants } from '@/lib/checkout-pricing'
 
 const SB = process.env.SUPABASE_URL!
 const KEY = process.env.SUPABASE_ANON_KEY!
@@ -8,8 +9,8 @@ export async function GET(req: NextRequest) {
   const phone = new URL(req.url).searchParams.get('phone')
   if (!phone) return NextResponse.json({ bonuses: 0 })
 
-  const digits = phone.replace(/\D/g, '')
-  const variants = [digits, `+${digits}`, `8${digits.slice(1)}`]
+  const variants = customerPhoneVariants(phone)
+  if (!variants.length) return NextResponse.json({ bonuses: 0 })
 
   // Ищем все записи по всем вариантам телефона и берём максимальный баланс
   const filter = variants.map(v => `phone.eq.${encodeURIComponent(v)}`).join(',')

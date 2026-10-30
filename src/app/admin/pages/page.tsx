@@ -18,7 +18,7 @@ interface PageRow {
   createdAt: string
 }
 
-export const CATEGORIES: Record<string, { label: string; color: string }> = {
+const CATEGORIES: Record<string, { label: string; color: string }> = {
   events: { label: 'События и акции', color: 'bg-orange-100 text-orange-700' },
   news:   { label: 'Новости',         color: 'bg-blue-100 text-blue-700' },
   tips:   { label: 'Советы',          color: 'bg-teal-100 text-teal-700' },

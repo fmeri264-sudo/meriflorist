@@ -20,6 +20,8 @@ interface Order {
   paymentStatus: string
   paymentMethod: string
   totalAmount: number
+  promoCode?: string | null
+  promoDiscount?: number
   recipientName: string
   recipientPhone: string
   address: string | null
@@ -297,6 +299,9 @@ export default function AdminOrdersPage() {
                 </div>
                 <div className="text-right">
                   <div className="font-bold text-gray-900">{order.totalAmount.toLocaleString('ru')} ₽</div>
+                  {order.promoCode && (
+                    <div className="text-xs text-pink-600 mt-1">{order.promoCode}: −{(order.promoDiscount ?? 0).toLocaleString('ru')} ₽</div>
+                  )}
                   <div className="text-xs text-gray-400">{order.items.length} поз.</div>
                 </div>
               </div>

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test tests/*.test.ts",
+    "db:promocodes": "node scripts/apply-promocodes.mjs",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:seed:dry": "npx tsx prisma/seed.ts --dry-run",
     "db:studio": "npx prisma studio"

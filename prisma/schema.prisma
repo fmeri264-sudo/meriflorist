@@ -1,8 +1,13 @@
 generator client {
   provider = "prisma-client-js"
 }
+datasource db {
+  provider = "postgresql"
+}
 
-
+model LegalPage {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
   title     String
   content   String   @default("")
   updatedAt DateTime @updatedAt

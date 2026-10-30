@@ -79,6 +79,6 @@ export const useCartStore = create<CartStore>()(
       count: () =>
         get().items.reduce((sum, i) => sum + i.qty, 0),
     }),
-    { name: 'meriflorist-cart' }
+    { name: 'meriflorist-cart', skipHydration: true }
   )
 )

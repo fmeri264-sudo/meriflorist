@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import PromoCodesPanel from '@/components/admin/PromoCodesPanel'
 import { Plus, Trash2, GripVertical, ToggleLeft, ToggleRight, Pencil, Check, X } from 'lucide-react'
 
 interface BonusRule {
@@ -203,6 +204,7 @@ export default function BonusesPage() {
         <p className="font-medium mb-1">Как работает приоритет:</p>
         <p>Правила проверяются сверху вниз (по порядку). Применяется первое подходящее активное правило. Если ни одно не подходит — бонус не начисляется.</p>
       </div>
+      <PromoCodesPanel />
     </div>
   )
 }

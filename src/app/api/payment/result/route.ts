@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
             deliveryLine,
             itemLines,
             `💳 Онлайн (оплачено) · Итого: ${order.totalAmount.toLocaleString('ru')} ₽`,
+            order.promoCode ? `🏷 Промокод ${order.promoCode}: −${order.promoDiscount ?? 0} ₽` : '',
             order.comment ? `💬 ${order.comment}` : '',
             order.cardText ? `📝 Открытка: ${order.cardText}` : '',
           ].filter(Boolean).join('\n')

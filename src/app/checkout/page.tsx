@@ -4,8 +4,10 @@ import { useCartStore } from '@/store/cart'
 import { formatPrice, getDeliveryTimeSlots, getMinDeliveryDate } from '@/lib/utils'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MapPin } from 'lucide-react'
+import { promoDiscount as calculatePromoDiscount, type PromoCode } from '@/lib/promocodes'
 
 const PICKUP_LOCATIONS = [
   {
@@ -26,14 +28,57 @@ export default function CheckoutPage() {
 
   const [selfPickup, setSelfPickup] = useState(false)
   const [pickupLocationId, setPickupLocationId] = useState(1)
-  const [deliveryCost, setDeliveryCost] = useState<number | null>(null)
+  const [deliveryQuote, setDeliveryQuote] = useState<{ address: string; price: number | null } | null>(null)
   const [loadingCost, setLoadingCost] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
   // Бонусы
-  const [bonusBalance, setBonusBalance] = useState<number | null>(null)
-  const [useBonuses, setUseBonuses] = useState(false)
+  const [bonusQuote, setBonusQuote] = useState<{ phone: string; balance: number } | null>(null)
+  const [bonusPhone, setBonusPhone] = useState<string | null>(null)
+
+  const [promoInput, setPromoInput] = useState('')
+  const [appliedPromo, setAppliedPromo] = useState<(PromoCode & { cartKey: string }) | null>(null)
+  const [promoError, setPromoError] = useState('')
+  const [applyingPromo, setApplyingPromo] = useState(false)
+  const promoRequestId = useRef(0)
+  const cartKey = JSON.stringify(items.map(i => [i.product.id, i.size, i.qty, i.price]))
+  const activePromo = appliedPromo?.cartKey === cartKey ? appliedPromo : null
+
+  async function applyPromo() {
+    const requestId = ++promoRequestId.current
+    const requestedCart = cartKey
+    setApplyingPromo(true)
+    setPromoError('')
+    try {
+      const res = await fetch('/api/promocodes/validate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoInput, items: items.map(i => ({ productId: i.product.id, size: i.size, qty: i.qty })) }),
+      })
+      const data = await res.json()
+      if (requestId !== promoRequestId.current || JSON.stringify(useCartStore.getState().items.map(i => [i.product.id, i.size, i.qty, i.price])) !== requestedCart) return
+      if (!res.ok) throw new Error(data.error || 'Не удалось проверить промокод')
+      if (data.subtotal !== subtotal) throw new Error('Стоимость товаров изменилась. Обновите корзину.')
+      setAppliedPromo({ ...data, id: 0, name: '', isActive: true, cartKey: requestedCart })
+      setPromoInput(data.code)
+      setUseBonuses(false)
+    } catch (error) {
+      if (requestId === promoRequestId.current) {
+        setAppliedPromo(null)
+        setPromoError(error instanceof Error ? error.message : 'Не удалось проверить промокод')
+      }
+    } finally {
+      if (requestId === promoRequestId.current) setApplyingPromo(false)
+    }
+  }
+
+  function removePromo() {
+    promoRequestId.current++
+    setApplyingPromo(false)
+    setAppliedPromo(null)
+    setPromoInput('')
+    setPromoError('')
+  }
 
   // Подсказки адреса
   type Suggestion = { fullname: string; description: string; street: string; house: string }
@@ -87,11 +132,10 @@ export default function CheckoutPage() {
     [form.deliveryDate]
   )
 
-  useEffect(() => {
-    if (availableTimeSlots.length && !availableTimeSlots.includes(form.deliveryTime)) {
-      setForm(current => ({ ...current, deliveryTime: availableTimeSlots[0] }))
-    }
-  }, [availableTimeSlots, form.deliveryTime])
+  const effectiveDeliveryTime = availableTimeSlots.includes(form.deliveryTime) ? form.deliveryTime : (availableTimeSlots[0] ?? '')
+  const bonusBalance = bonusQuote?.phone === form.recipientPhone && form.recipientPhone.length === 10 ? bonusQuote.balance : null
+  const useBonuses = bonusPhone === form.recipientPhone
+  function setUseBonuses(value: boolean) { setBonusPhone(value ? form.recipientPhone : null) }
 
   const calcAddress = useMemo(() => {
     if (selfPickup || !addr.street || !addr.house) return ''
@@ -108,27 +152,27 @@ export default function CheckoutPage() {
     ].filter(Boolean).join(', ')
   }, [addr])
 
+  const deliveryCost = deliveryQuote?.address === calcAddress ? deliveryQuote.price : null
   const subtotal = total()
   const shipping = selfPickup ? 0 : (deliveryCost ?? null)
   const orderTotal = subtotal + (shipping ?? 0)
-  const bonusDiscount = (useBonuses && bonusBalance && shipping !== null)
+  const promoDiscount = activePromo ? calculatePromoDiscount(activePromo, subtotal) : 0
+  const bonusDiscount = (!activePromo && useBonuses && bonusBalance && shipping !== null)
     ? Math.min(bonusBalance, orderTotal)
     : 0
-  const finalTotal = Math.max(0, orderTotal - bonusDiscount)
+  const finalTotal = Math.max(0, orderTotal - promoDiscount - bonusDiscount)
 
   // Загружаем баланс бонусов при вводе телефона
   useEffect(() => {
     const phone = form.recipientPhone.replace(/\D/g, '')
     if (phone.length < 10 || phone.length > 10) {
-      setBonusBalance(null)
-      setUseBonuses(false)
       return
     }
     const t = setTimeout(() => {
       fetch(`/api/account/bonuses?phone=${encodeURIComponent(phone)}`)
         .then(r => r.json())
-        .then(d => setBonusBalance(d.bonuses ?? 0))
-        .catch(() => setBonusBalance(null))
+        .then(d => setBonusQuote({ phone: form.recipientPhone, balance: d.bonuses ?? 0 }))
+        .catch(() => setBonusQuote(null))
     }, 800)
     return () => clearTimeout(t)
   }, [form.recipientPhone])
@@ -136,7 +180,6 @@ export default function CheckoutPage() {
   // Расчёт стоимости доставки
   useEffect(() => {
     if (!calcAddress) {
-      setDeliveryCost(null)
       return
     }
     const timeout = setTimeout(async () => {
@@ -148,9 +191,9 @@ export default function CheckoutPage() {
           body: JSON.stringify({ address: calcAddress }),
         })
         const data = await res.json()
-        setDeliveryCost(data.price ?? null)
+        setDeliveryQuote({ address: calcAddress, price: data.price ?? null })
       } catch {
-        setDeliveryCost(null)
+        setDeliveryQuote({ address: calcAddress, price: null })
       } finally {
         setLoadingCost(false)
       }
@@ -169,6 +212,7 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          deliveryTime: effectiveDeliveryTime,
           paymentMethod: 'ONLINE',
           recipientPhone: `+7${form.recipientPhone}`,
           address: selfPickup ? `Самовывоз: ${pickupLoc.full}` : fullAddress,
@@ -187,6 +231,7 @@ export default function CheckoutPage() {
           subtotal,
           total: finalTotal,
           bonusUsed: bonusDiscount,
+          promoCode: activePromo?.code ?? null,
         }),
       })
 
@@ -200,9 +245,9 @@ export default function CheckoutPage() {
       const data = JSON.parse(text)
 
       navigated = true
-      if (data.paymentUrl && finalTotal > 0) {
+      if (data.paymentUrl) {
         // Корзину очистим на странице успеха — чтобы при неудачной оплате товары остались
-        window.location.href = data.paymentUrl
+        window.location.assign(data.paymentUrl)
       } else {
         clearCart()
         router.push(`/order-success?number=${data.number}`)
@@ -215,7 +260,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const canProceed = form.recipientName && form.recipientPhone && (
+  const canProceed = form.recipientName.trim() && form.recipientPhone.length === 10 && effectiveDeliveryTime && (
     selfPickup || (addr.street && addr.house && !loadingCost && shipping !== null)
   )
 
@@ -224,9 +269,9 @@ export default function CheckoutPage() {
       <div className="max-w-xl mx-auto px-4 py-24 text-center">
         <p className="text-5xl mb-4">🌸</p>
         <p className="text-xl font-semibold mb-4">Корзина пуста</p>
-        <a href="/catalog" className="bg-rose-500 text-white px-6 py-3 rounded-full inline-block font-medium">
+        <Link href="/catalog" className="bg-rose-500 text-white px-6 py-3 rounded-full inline-block font-medium">
           Перейти в каталог
-        </a>
+        </Link>
       </div>
     )
   }
@@ -274,7 +319,7 @@ export default function CheckoutPage() {
                   <label className="flex items-center gap-3 mt-3 cursor-pointer bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                     <input type="checkbox" className="accent-rose-500 w-4 h-4 shrink-0"
                       checked={useBonuses}
-                      onChange={e => setUseBonuses(e.target.checked)} />
+                      onChange={e => { setUseBonuses(e.target.checked); if (e.target.checked) removePromo() }} />
                     <span className="text-sm">
                       <span className="font-semibold text-amber-700">🎁 У вас {bonusBalance.toLocaleString('ru')} бонусов</span>
                       <span className="text-gray-500"> — списать как скидку {Math.min(bonusBalance, orderTotal).toLocaleString('ru')} ₽</span>
@@ -291,7 +336,7 @@ export default function CheckoutPage() {
                   }`}>
                   🚗 Доставка курьером
                 </button>
-                <button onClick={() => { setSelfPickup(true); setDeliveryCost(0) }}
+                <button onClick={() => setSelfPickup(true)}
                   className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-colors ${
                     selfPickup ? 'bg-rose-500 text-white border-rose-500' : 'border-gray-300 text-gray-600 hover:border-rose-200'
                   }`}>
@@ -436,7 +481,7 @@ export default function CheckoutPage() {
                   <label className="block text-xs text-gray-500 mb-1">
                     {selfPickup ? 'Время самовывоза *' : 'Время доставки *'}
                   </label>
-                  <select className={inp} value={form.deliveryTime}
+                  <select className={inp} value={effectiveDeliveryTime}
                     onChange={e => setForm({ ...form, deliveryTime: e.target.value })}>
                     {availableTimeSlots.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
@@ -469,9 +514,9 @@ export default function CheckoutPage() {
               )}
               <button
                 onClick={handleSubmit}
-                disabled={!canProceed || submitting}
+                disabled={!canProceed || submitting || applyingPromo}
                 className="w-full bg-rose-500 text-white py-3.5 rounded-full font-semibold hover:bg-rose-600 transition-colors disabled:opacity-50">
-                {submitting ? 'Обработка...' : loadingCost ? 'Рассчитываем доставку…' : 'Перейти к оплате'}
+                {submitting ? 'Обработка...' : loadingCost ? 'Рассчитываем доставку…' : finalTotal === 0 ? 'Оформить заказ' : 'Перейти к оплате'}
               </button>
             </>
           )}
@@ -497,6 +542,37 @@ export default function CheckoutPage() {
                 </li>
               ))}
             </ul>
+            <div className="border-t py-4">
+              <label htmlFor="checkout-promo" className="block text-sm font-medium mb-2">Промокод</label>
+              <div className="flex gap-2">
+                <input id="checkout-promo" className={`${inp} min-w-0 uppercase`} value={promoInput}
+                  maxLength={40} placeholder="Введите промокод" autoComplete="off" disabled={submitting}
+                  aria-describedby="promo-feedback"
+                  onChange={e => {
+                    promoRequestId.current++
+                    setApplyingPromo(false)
+                    setAppliedPromo(null)
+                    setPromoError('')
+                    setPromoInput(e.target.value)
+                  }}
+                  onKeyDown={e => { if (e.key === 'Enter' && promoInput.trim() && !applyingPromo) { e.preventDefault(); applyPromo() } }} />
+                {activePromo ? (
+                  <button type="button" onClick={removePromo} disabled={submitting}
+                    className="text-sm text-gray-500 px-2 hover:text-rose-600">Убрать</button>
+                ) : (
+                  <button type="button" onClick={applyPromo} disabled={!promoInput.trim() || applyingPromo || submitting}
+                    className="rounded-xl bg-rose-500 text-white px-3 text-sm disabled:opacity-50 shrink-0">
+                    {applyingPromo ? 'Проверка…' : 'Применить'}
+                  </button>
+                )}
+              </div>
+              <div id="promo-feedback" aria-live="polite" className="text-xs mt-2">
+                {promoError && <p role="alert" className="text-red-600">{promoError}</p>}
+                {activePromo && <p className="text-green-700">Промокод {activePromo.code} применён: −{formatPrice(promoDiscount)}</p>}
+                {appliedPromo && !activePromo && <p className="text-amber-700">Корзина изменилась — примените промокод повторно.</p>}
+                <p className="text-gray-500 mt-1">Можно использовать промокод или бонусы. Скидка по промокоду действует на товары, без доставки.</p>
+              </div>
+            </div>
             <div className="border-t pt-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Товары</span>
@@ -511,6 +587,12 @@ export default function CheckoutPage() {
                     : 'Укажите адрес'}
                 </span>
               </div>
+              {activePromo && (
+                <div className="flex justify-between text-rose-600 font-medium gap-2">
+                  <span>Промокод {activePromo.code}</span>
+                  <span className="shrink-0">−{formatPrice(promoDiscount)}</span>
+                </div>
+              )}
               {bonusDiscount > 0 && (
                 <div className="flex justify-between text-amber-600 font-medium">
                   <span>🎁 Бонусы</span>
@@ -520,7 +602,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
                 <span>Итого</span>
                 <span className="text-rose-500">
-                  {shipping !== null ? formatPrice(finalTotal) : formatPrice(subtotal)}
+                  {formatPrice(finalTotal)}
                   {shipping === null && !selfPickup && <span className="text-xs font-normal text-gray-400 ml-1">+ доставка</span>}
                 </span>
               </div>
