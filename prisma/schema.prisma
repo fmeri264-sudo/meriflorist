@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+  title     String
+  content   String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  slug     String    @unique
+  image    String?
+  sort     Int       @default(0)
+  products Product[]
+}
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  slug        String      @unique
+  description String?
+  composition String?
+  price       Int
+  priceL      Int?
+  priceXL     Int?
+  images      String[]
+  video       String?
+  inStock     Boolean     @default(true)
+  isHit       Boolean     @default(false)
+  isNew       Boolean     @default(false)
+  category    Category    @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+  tags        String[]
+  createdAt   DateTime    @default(now())
+  orderItems  OrderItem[]
+  reviews     Review[]
+  wishlists   Wishlist[]
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  phone     String     @unique
+  name      String?
+  email     String?
+  bonuses   Int        @default(0)
+  createdAt DateTime   @default(now())
+  orders    Order[]
+  wishlists Wishlist[]
+  reminders Reminder[]
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  number          String      @unique
+  user            User?       @relation(fields: [userId], references: [id])
+  userId          Int?
+  recipientName   String
+  recipientPhone  String
+  address         String
+  deliveryDate    DateTime
+  deliveryTime    String
+  deliveryCost    Int
+  selfPickup      Boolean     @default(false)
+  cardText        String?
+  photoReport     Boolean     @default(false)
+  comment         String?
+  subtotal        Int
+  total           Int
+  status          OrderStatus @default(NEW)
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  robokassaInvId  String?
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   Int
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int
+  size      String? // S, M, L
+  price     Int
+  qty       Int
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int
+  author    String
+  text      String
+  rating    Int
+  image     String?
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Wishlist {
+  id        Int     @id @default(autoincrement())
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int
+}
+
+model Reminder {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  title     String
+  date      DateTime
+  notified  Boolean  @default(false)
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  ASSEMBLING
+  READY
+  DELIVERING
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  ONLINE
+  CASH
+  SBP
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}

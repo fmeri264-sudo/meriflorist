@@ -78,7 +78,7 @@ export default async function HomePage() {
         if (!products.length) return null
         return (
           <ProductsSection key={s.id} title={s.title} subtitle={s.subtitle}
-            products={products} linkUrl={s.linkUrl} linkText={s.linkText}
+            products={products} linkUrl={s.type === 'bouquet_of_day' ? `/catalog?section=${s.id}` : s.linkUrl} linkText={s.linkText}
             bannerUrl={s.bannerUrl} highlight={s.type === 'bouquet_of_day'} />
         )
       }))}

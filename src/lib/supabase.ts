@@ -64,6 +64,7 @@ export interface DbCategory {
 export async function getProducts(params: {
   categorySlug?: string
   sectionId?: number
+  productIds?: number[]
   isHit?: boolean
   inStock?: boolean
   isAddon?: boolean
@@ -84,7 +85,9 @@ export async function getProducts(params: {
   if (params.inStock !== false) filters.push('inStock=eq.true')
   if (params.isAddon === true) filters.push('isAddon=eq.true')
   if (params.isHit) filters.push('isHit=eq.true')
-  if (params.sectionId) filters.push(`sectionIds=cs.%7B${params.sectionId}%7D`)
+  if (params.productIds?.length) {
+    filters.push(`id=in.(${params.productIds.join(',')})`)
+  } else if (params.sectionId) filters.push(`sectionIds=cs.%7B${params.sectionId}%7D`)
   if (params.priceMin) filters.push(`price=gte.${params.priceMin}`)
   if (params.priceMax) filters.push(`price=lte.${params.priceMax}`)
   if (params.occasionId) filters.push(`occasionIds=cs.%7B${params.occasionId}%7D`)
@@ -151,6 +154,7 @@ export interface DbReview {
   rating: number
   source: string
   productName: string | null
+  productUrl?: string
   visible: boolean
   createdAt: string
 }
@@ -160,7 +164,38 @@ export async function getHomeSections(): Promise<DbSection[]> {
 }
 
 export async function getSiteReviews(): Promise<DbReview[]> {
-  return get('SiteReview', 'visible=eq.true&order=createdAt.desc&limit=12')
+  const reviews = await get('SiteReview', 'visible=eq.true&order=createdAt.desc&limit=12')
+  return attachReviewProductLinks(reviews)
+}
+
+export async function attachReviewProductLinks(reviews: DbReview[]): Promise<DbReview[]> {
+  if (!reviews.some(review => review.productName)) return reviews
+  const products: { name: string; sku: string | null; slug: string }[] = []
+  try {
+    for (let offset = 0; ; offset += 1000) {
+      const page = await get('Product', `select=name,sku,slug&isVisible=eq.true&order=id.asc&limit=1000&offset=${offset}`)
+      products.push(...page)
+      if (page.length < 1000) break
+    }
+  } catch (error) {
+    console.error('Не удалось связать отзывы с каталогом', error)
+    return reviews
+  }
+  const matches = new Map<string, Set<string>>()
+  for (const product of products) {
+    if (!product.slug) continue
+    for (const key of [product.name, product.sku]) {
+      if (!key?.trim()) continue
+      const slugs = matches.get(key.trim()) ?? new Set<string>()
+      slugs.add(product.slug)
+      matches.set(key.trim(), slugs)
+    }
+  }
+  return reviews.map(review => {
+    const slugs = matches.get(review.productName?.trim() ?? '')
+    if (!slugs || slugs.size !== 1) return review
+    return { ...review, productUrl: `/catalog/${encodeURIComponent([...slugs][0])}` }
+  })
 }
 
 export async function getPinnedProducts(): Promise<DbProduct[]> {

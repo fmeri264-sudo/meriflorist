@@ -30,6 +30,7 @@ interface Props {
 async function fetchProducts(
   params: Awaited<Props['searchParams']>,
   occasionId?: number,
+  productIds?: number[],
 ) {
   try {
     const isBudget = params.category === 'budget'
@@ -42,6 +43,7 @@ async function fetchProducts(
     return await getProducts({
       categorySlug: isBudget || isHits ? undefined : params.category,
       sectionId: params.section ? Number(params.section) : undefined,
+      productIds,
       isHit: isHits ? true : undefined,
       priceMax: params.priceMax ? Number(params.priceMax) : isBudget ? 2000 : undefined,
       priceMin: params.priceMin ? Number(params.priceMin) : undefined,
@@ -75,7 +77,8 @@ export default async function CatalogPage({ searchParams }: Props) {
     ? sections.find(s => s.id === Number(params.section))
     : undefined
 
-  const rawProducts = await fetchProducts(params, activeOccasion?.id)
+  const pinnedIds = activeSection?.config.pinnedProductIds as number[] | undefined
+  const rawProducts = await fetchProducts(params, activeOccasion?.id, pinnedIds)
   // Исключаем дополнения к заказу из основного каталога
   const products = (rawProducts as unknown as Product[]).filter(p => !p.isAddon)
 
@@ -115,7 +118,7 @@ export default async function CatalogPage({ searchParams }: Props) {
               ].map((s) => (
                 <a
                   key={s.value}
-                  href={`?sort=${s.value}`}
+                  href={`?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined)) as Record<string, string>, sort: s.value }).toString()}`}
                   className={`text-sm px-3 py-1 rounded-full border transition-colors ${
                     params.sort === s.value || (!params.sort && s.value === '')
                       ? 'bg-rose-500 text-white border-rose-500'
