@@ -35,7 +35,7 @@ export default function ProductCard({ product, variants = [] }: Props) {
   const hasDims = product.width || product.height
 
   return (
-    <div className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+    <div className="mary-product group relative overflow-hidden">
       {/* Badges */}
       <div className="absolute top-3 left-3 flex gap-2 z-10">
         {product.isHit && (
@@ -48,6 +48,7 @@ export default function ProductCard({ product, variants = [] }: Props) {
 
       {/* Wishlist */}
       <button
+        aria-label={isFav ? 'Удалить из избранного' : 'Добавить в избранное'}
         onClick={toggleFav}
         className={cn(
           'absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-sm transition-colors',
@@ -59,7 +60,7 @@ export default function ProductCard({ product, variants = [] }: Props) {
 
       {/* Image */}
       <Link href={`/catalog/${product.slug}`}>
-        <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+        <div className="relative w-full aspect-[3/4] bg-gray-50 overflow-hidden">
           {product.images[0] ? (
             <Image
               src={product.images[0]}
@@ -87,19 +88,19 @@ export default function ProductCard({ product, variants = [] }: Props) {
       </Link>
 
       {/* Info */}
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         <Link href={`/catalog/${product.slug}`}>
-          <h3 className="font-medium text-base text-gray-900 truncate hover:text-rose-500 transition-colors mb-1">
+          <h3 className="font-medium text-base text-gray-900 line-clamp-2 min-h-12 hover:text-rose-500 transition-colors mb-1">
             {product.name}
           </h3>
         </Link>
 
-        <div className="flex items-center justify-between gap-2 mt-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
           <span className="text-base font-bold text-gray-900 whitespace-nowrap">{formatPrice(product.price)}</span>
           <button
             onClick={() => addItem(product, 'M')}
             className={cn(
-              'flex items-center gap-1 bg-rose-500 text-white px-2.5 py-1.5 rounded-full text-xs font-medium hover:bg-rose-600 transition-colors whitespace-nowrap',
+              'flex items-center gap-1 bg-rose-500 text-white px-3 py-2.5 rounded-md text-sm font-medium hover:bg-rose-600 transition-colors whitespace-nowrap',
               !product.inStock && 'opacity-50 cursor-not-allowed'
             )}
             disabled={!product.inStock}

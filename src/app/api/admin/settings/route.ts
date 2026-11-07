@@ -24,14 +24,16 @@ export async function PUT(req: NextRequest) {
     headers: { ...h, Prefer: 'return=representation' },
     body: JSON.stringify({ value }),
   })
+  if (!patch.ok) return NextResponse.json({ error: 'Не удалось сохранить настройку' }, { status: 502 })
   const patched = await patch.json()
 
   if (!Array.isArray(patched) || !patched.length) {
-    await fetch(`${SB}/rest/v1/SiteSettings`, {
+    const created = await fetch(`${SB}/rest/v1/SiteSettings`, {
       method: 'POST',
       headers: { ...h, Prefer: 'return=minimal' },
       body: JSON.stringify({ key, value }),
     })
+    if (!created.ok) return NextResponse.json({ error: 'Не удалось создать настройку' }, { status: 502 })
   }
 
   revalidatePath('/', 'layout')

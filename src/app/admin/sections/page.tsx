@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Check, X, Pin, PinOff } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 interface Section {
   id: number; title: string; subtitle: string | null; type: string
@@ -133,6 +134,7 @@ export default function AdminSectionsPage() {
     <div className="p-6 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Блоки главной страницы</h1>
+        <Link href="/admin/settings#hero-banner" className="inline-flex my-4 text-rose-700 underline underline-offset-4">Главный баннер — фото, текст и предпросмотр →</Link>
         <button onClick={addSection}
           className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
           <Plus size={16} /> Добавить блок

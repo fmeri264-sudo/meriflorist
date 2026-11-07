@@ -1,31 +1,30 @@
 import Link from 'next/link'
-import { getOccasions } from '@/lib/supabase'
-import OccasionsList from './OccasionsList'
-import USPList from './USPList'
+import Image from 'next/image'
+import { ArrowUpRight } from 'lucide-react'
+import type { SiteSettings } from '@/lib/settings'
 
-export default async function HeroSection() {
-  const occasions = await getOccasions().catch(() => [])
-
+export default function HeroSection({ settings, fallbackImage }: { settings: SiteSettings; fallbackImage?: string }) {
+  const image = settings.heroImageUrl || fallbackImage
+  const href = settings.heroButtonUrl.startsWith('/') && !settings.heroButtonUrl.startsWith('//') ? settings.heroButtonUrl : '/catalog'
   return (
-    <section className="bg-gradient-to-br from-rose-50 to-pink-50 py-1.5 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between gap-2 md:gap-6 mb-1">
-          <p className="min-w-0 truncate text-xs md:text-base font-normal text-gray-900">
-            Доставка цветов по Санкт-Петербургу
-          </p>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <Link
-              href="/catalog"
-              className="bg-rose-500 text-white px-2.5 py-1 rounded-full text-xs font-bold hover:bg-rose-600 transition-colors shadow-md"
-            >
-              Выбрать букет
-            </Link>
-          </div>
+    <section className="mary-hero">
+      <div className="mary-hero-copy">
+        <p className="mary-eyebrow">Ваш личный флорист в Петербурге</p>
+        <h1>{settings.heroTitle}</h1>
+        <p className="mary-hero-description">{settings.heroDescription}</p>
+        <div className="mary-hero-actions flex flex-wrap items-center gap-5 mt-8">
+          <Link href={href} className="mary-button">{settings.heroButtonText}</Link>
+          <Link href="/contacts" className="mary-text-link inline-flex items-center gap-2">Помочь с выбором <ArrowUpRight size={16} aria-hidden="true" /></Link>
         </div>
-
-        <USPList />
-
-        {occasions.length > 0 && <OccasionsList occasions={occasions} />}
+        <p className="mary-signature">С теплом, Мэри</p>
+      </div>
+      <div className="mary-hero-photo">
+        {image ? (
+          <>
+            <Image src={image} alt="Букет, собранный флористами Мэри" fill priority sizes="(max-width: 767px) 100vw, 62vw" className={settings.heroMobileImageUrl ? 'object-cover hidden md:block' : 'object-cover'} style={{ objectPosition: settings.heroImagePosition }} />
+            {settings.heroMobileImageUrl && <Image src={settings.heroMobileImageUrl} alt="Букет Мэри" fill priority sizes="100vw" className="object-cover md:hidden" style={{ objectPosition: settings.heroImagePosition }} />}
+          </>
+        ) : <div className="mary-photo-placeholder"><span aria-hidden="true">✿</span><p>Цветы для ваших особенных моментов</p></div>}
       </div>
     </section>
   )

@@ -3,6 +3,19 @@ const KEY = process.env.SUPABASE_ANON_KEY!
 const h = { apikey: KEY, Authorization: `Bearer ${KEY}` }
 
 export interface SiteSettings {
+  heroImageUrl: string
+  heroMobileImageUrl: string
+  heroImagePosition: string
+  heroTitle: string
+  heroDescription: string
+  heroButtonText: string
+  heroButtonUrl: string
+  homeSelectionTitle: string
+  homeSeasonalImageUrl: string
+  homeSeasonalTitle: string
+  homeSeasonalLink: string
+  homeAboutText: string
+  homeAboutImageUrl: string
   siteName: string
   logoUrl: string
   phone: string
@@ -17,8 +30,21 @@ export interface SiteSettings {
 }
 
 export const SETTING_DEFAULTS: SiteSettings = {
-  siteName: 'Meri Florist',
-  logoUrl: '',
+  heroImageUrl: '',
+  heroMobileImageUrl: '',
+  heroImagePosition: '50% 50%',
+  heroTitle: 'Маленькое чудо — в ваших руках',
+  heroDescription: 'Букеты, собранные с вниманием к вашим чувствам. Поможем выбрать и покажем фото перед отправкой.',
+  heroButtonText: 'Выбрать букет',
+  heroButtonUrl: '/catalog',
+  homeSelectionTitle: 'Выбор Мэри',
+  homeSeasonalImageUrl: '',
+  homeSeasonalTitle: 'Сезонное настроение',
+  homeSeasonalLink: '/catalog',
+  homeAboutText: 'За каждым букетом — внимание к вашим чувствам. Поможем выбрать цветы, подобрать оттенки и найти слова для открытки. Мэри — ваш личный флорист в Петербурге.',
+  homeAboutImageUrl: '',
+  siteName: 'МЭРИ',
+  logoUrl: '/brand/mary-horizontal.png',
   phone: '+7 (800) 123-45-67',
   whatsapp: 'https://wa.me/78001234567',
   telegram: '',

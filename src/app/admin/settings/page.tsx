@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Check, Upload, RefreshCw } from 'lucide-react'
 import type { SiteSettings } from '@/lib/settings'
 import { SETTING_DEFAULTS } from '@/lib/settings'
+import BannerPreview from '@/components/admin/BannerPreview'
 
 type SettingKey = keyof SiteSettings
 
@@ -13,14 +14,21 @@ function useSave() {
 
   async function save(key: SettingKey, value: string) {
     setSaving(key)
-    await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value }),
-    })
-    setSaving(null)
-    setSaved(key)
-    setTimeout(() => setSaved(null), 2000)
+    setSaved(null)
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      })
+      if (!response.ok) throw new Error('Save failed')
+      setSaved(key)
+      setTimeout(() => setSaved(null), 2000)
+    } catch {
+      alert('Не удалось сохранить настройку. Повторите попытку.')
+    } finally {
+      setSaving(null)
+    }
   }
 
   return { save, saving, saved }
@@ -169,7 +177,7 @@ export default function AdminSettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Логотип</label>
-            <p className="text-xs text-gray-400 mb-2">Рекомендуемый размер: 240×80px, PNG с прозрачным фоном</p>
+            <p className="text-xs text-gray-400 mb-2">Новый логотип Мэри включён по умолчанию. Для замены загрузите горизонтальный PNG с прозрачным фоном.</p>
             <div className="flex items-center gap-3">
               {vals.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -203,6 +211,39 @@ export default function AdminSettingsPage() {
         </div>
       </section>
 
+      <section className="mb-8">
+        <h2 id="hero-banner" className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b scroll-mt-8">Главный баннер</h2>
+        <p className="text-sm text-gray-500 mb-4">Фото занимает большую часть первого экрана. Все существующие блоки и поводы управляются в своих разделах.</p>
+        <div className="space-y-4">
+          <Field label="Главное фото (ссылка)" fieldKey="heroImageUrl" value={vals.heroImageUrl} onChange={set('heroImageUrl')} onSave={save} saving={saving} saved={saved} hint="Загрузите фото через кнопку ниже или вставьте ссылку." />
+          <Field label="Фото для телефона (необязательно)" fieldKey="heroMobileImageUrl" value={vals.heroMobileImageUrl} onChange={set('heroMobileImageUrl')} onSave={save} saving={saving} saved={saved} hint="Если не задано, используется главное фото." />
+          <Field label="Положение кадра" fieldKey="heroImagePosition" value={vals.heroImagePosition} onChange={set('heroImagePosition')} onSave={save} saving={saving} saved={saved} hint="Например: 50% 50% — по центру; 50% 30% — выше." />
+          <Field label="Заголовок баннера" fieldKey="heroTitle" value={vals.heroTitle} onChange={set('heroTitle')} onSave={save} saving={saving} saved={saved} hint="" />
+          <Field label="Описание баннера" fieldKey="heroDescription" value={vals.heroDescription} onChange={set('heroDescription')} onSave={save} saving={saving} saved={saved} hint="" />
+          <Field label="Текст кнопки" fieldKey="heroButtonText" value={vals.heroButtonText} onChange={set('heroButtonText')} onSave={save} saving={saving} saved={saved} hint="" />
+          <Field label="Ссылка кнопки" fieldKey="heroButtonUrl" value={vals.heroButtonUrl} onChange={set('heroButtonUrl')} onSave={save} saving={saving} saved={saved} hint="Например: /catalog или /catalog?occasion=birthday" />
+          <label className="block text-sm font-medium">Загрузить главное фото
+            <input type="file" accept="image/*" className="block mt-2 text-sm" onChange={async e => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              const fd = new FormData()
+              fd.append('file', file)
+              try {
+                const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+                const data = await res.json()
+                if (!res.ok || !data.url) throw new Error('Не удалось загрузить фото')
+                setVals(v => ({ ...v, heroImageUrl: data.url }))
+                await save('heroImageUrl', data.url)
+              } catch { alert('Не удалось сохранить фото. Попробуйте ещё раз.') }
+              e.target.value = ''
+            }} />
+          </label>
+          <BannerPreview settings={vals} />
+          {vals.heroImageUrl && <a href="/" target="_blank" rel="noopener noreferrer" className="text-rose-700 underline">Посмотреть главную ↗</a>}
+        </div>
+      </section>
+
+<section className="mb-8"><h2 className="text-lg font-semibold mb-4">Подборка, сезонный баннер и О Мэри</h2><div className="space-y-4"><Field label="Заголовок подборки" fieldKey="homeSelectionTitle" value={vals.homeSelectionTitle} onChange={set('homeSelectionTitle')} onSave={save} saving={saving} saved={saved} hint="Подборка из первых восьми основных товаров каталога." /><Field label="Фото сезонного баннера" fieldKey="homeSeasonalImageUrl" value={vals.homeSeasonalImageUrl} onChange={set('homeSeasonalImageUrl')} onSave={save} saving={saving} saved={saved} hint="Пустое поле скрывает сезонный баннер." /><Field label="Заголовок сезонного баннера" fieldKey="homeSeasonalTitle" value={vals.homeSeasonalTitle} onChange={set('homeSeasonalTitle')} onSave={save} saving={saving} saved={saved} hint="" /><Field label="Ссылка сезонного баннера" fieldKey="homeSeasonalLink" value={vals.homeSeasonalLink} onChange={set('homeSeasonalLink')} onSave={save} saving={saving} saved={saved} hint="Например: /catalog?section=3" /><Field label="Текст «О Мэри»" fieldKey="homeAboutText" value={vals.homeAboutText} onChange={set('homeAboutText')} onSave={save} saving={saving} saved={saved} hint="Пустое поле скрывает блок." /><Field label="Фото студии или флориста" fieldKey="homeAboutImageUrl" value={vals.homeAboutImageUrl} onChange={set('homeAboutImageUrl')} onSave={save} saving={saving} saved={saved} hint="Необязательно. Укажите ссылку на настоящее фото." /></div></section>
       {/* Контакты */}
       <section className="mb-8">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Контакты в шапке</h2>

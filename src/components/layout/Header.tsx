@@ -58,7 +58,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const siteName = settings?.siteName || 'Meri Florist'
-  const logoUrl = settings?.logoUrl || ''
+  const logoUrl = settings?.logoUrl || '/brand/mary-horizontal.png'
   const phone = settings?.phone || '+7 (800) 123-45-67'
   const phoneClean = phone.replace(/\D/g, '')
   const whatsapp = settings?.whatsapp || ''
@@ -67,12 +67,12 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
   const max = settings?.max || ''
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+    <header className="mary-header sticky top-0 z-50 border-b border-rose-100">
+      <div className="max-w-7xl mx-auto px-4 min-h-20 py-3 flex items-center justify-between gap-4">
         {/* Logo */}
-        <Link href="/" className="min-w-0 shrink">
+        <Link href="/" className="min-w-0 shrink-0">
           {logoUrl ? (
-            <Image src={logoUrl} alt={siteName} width={120} height={40} className="h-10 w-auto object-contain" />
+            <Image src={logoUrl} alt={siteName} width={270} height={90} className="w-[180px] sm:w-[240px] h-auto object-contain" />
           ) : (
             <span className="text-base sm:text-xl text-rose-500 tracking-tight line-clamp-1">
               <span className="font-bold">МЭРИ.</span>
@@ -82,7 +82,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-700">
+        <nav className="hidden xl:flex items-center gap-5 text-sm font-medium text-gray-700">
           {NAV_LINKS.map((l) => (
             <Link key={l.href} href={l.href} className="hover:text-rose-500 transition-colors">
               {l.label}
@@ -99,7 +99,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
         <div className="flex items-center gap-2">
           <a
             href={`tel:+${phoneClean}`}
-            className="hidden lg:flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-rose-500"
+            className="hidden 2xl:flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-rose-500"
           >
             <Phone className="w-4 h-4" />
             {phone}
@@ -110,7 +110,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
               href={whatsapp}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full text-green-600 hover:bg-green-50 transition-colors"
+              className="hidden 2xl:flex items-center justify-center w-8 h-8 rounded-full text-green-600 hover:bg-green-50 transition-colors"
               title="WhatsApp"
             >
               <WhatsAppIcon />
@@ -122,7 +122,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
               href={telegram}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full text-sky-500 hover:bg-sky-50 transition-colors"
+              className="hidden 2xl:flex items-center justify-center w-8 h-8 rounded-full text-sky-500 hover:bg-sky-50 transition-colors"
               title="Telegram"
             >
               <TelegramIcon />
@@ -134,7 +134,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
               href={vk}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full text-blue-700 hover:bg-blue-50 transition-colors"
+              className="hidden 2xl:flex items-center justify-center w-8 h-8 rounded-full text-blue-700 hover:bg-blue-50 transition-colors"
               title="ВКонтакте"
             >
               <VKIcon />
@@ -146,7 +146,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
               href={max}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full text-purple-600 hover:bg-purple-50 transition-colors"
+              className="hidden 2xl:flex items-center justify-center w-8 h-8 rounded-full text-purple-600 hover:bg-purple-50 transition-colors"
               title="MAX"
             >
               <MaxIcon />
@@ -171,7 +171,9 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
           </button>
 
           <button
-            className="md:hidden p-2 rounded-full hover:bg-gray-100"
+            className="xl:hidden p-2 rounded-full hover:bg-gray-100"
+            aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
+            aria-expanded={menuOpen}
             onClick={() => setMenuOpen(!menuOpen)}
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -181,7 +183,7 @@ export default function Header({ settings, navPages = [] }: HeaderProps) {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t bg-white px-4 py-3 flex flex-col gap-3">
+        <div className="xl:hidden border-t bg-white px-4 py-3 flex flex-col gap-3">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.href}

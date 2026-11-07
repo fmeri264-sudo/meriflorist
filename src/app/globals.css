@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf7f2;
+  --foreground: #302c2e;
 }
 
 @theme inline {
@@ -11,26 +11,18 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-rose-50:  #fce9f2;
-  --color-rose-100: #fad0e6;
-  --color-rose-200: #f5a0cd;
-  --color-rose-300: #ef6eb3;
-  --color-rose-400: #ea3d99;
-  --color-rose-500: #F4A9D1;
-  --color-rose-600: #e994c1;
-  --color-rose-700: #960051;
-  --color-rose-800: #6a003a;
-  --color-rose-900: #3f0022;
-
-  --color-pink-500: #F4A9D1;
-  --color-pink-600: #e994c1;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-rose-50: #fbf0f4;
+  --color-rose-100: #f3dce5;
+  --color-rose-200: #e8bdce;
+  --color-rose-300: #dc96b1;
+  --color-rose-400: #c66089;
+  --color-rose-500: #793b55;
+  --color-rose-600: #693149;
+  --color-rose-700: #58283d;
+  --color-rose-800: #641d39;
+  --color-rose-900: #48182b;
+  --color-pink-500: #793b55;
+  --color-pink-600: #693149;
 }
 
 html, body {
@@ -42,3 +34,59 @@ html, body {
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Shared storefront palette; admin controls retain their existing layout. */
+.mary-header { background: #faf7f2f5; }
+.mary-home h1, .mary-home h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: -.035em; }
+.mary-home h2 { font-size: clamp(1.9rem, 3.5vw, 3rem); line-height: 1.15; }
+.mary-eyebrow { color: #693149; font-size: .72rem; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 1.25rem; }
+.mary-hero { display: grid; grid-template-columns: minmax(0, 40fr) minmax(0, 60fr); max-width: 1600px; margin: auto; }
+.mary-hero-copy { padding: clamp(2rem, 5vw, 5.5rem) clamp(1.25rem, 4vw, 4rem); align-self: center; }
+.mary-hero h1 { font-size: clamp(2.6rem, 4.6vw, 4.7rem); line-height: 1.08; text-wrap: balance; }
+.mary-hero-description { margin-top: 1.8rem; color: #62585d; font-size: 1rem; line-height: 1.8; max-width: 35rem; }
+.mary-button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: .85rem 1.6rem; background: #793b55; color: white; border-radius: 5px; transition: background .2s; }
+.mary-button:hover { background: #58283d; }
+.mary-text-link { color: #693149; text-decoration: underline; text-underline-offset: 6px; padding-block: .75rem; }
+.mary-signature { font: italic 1.7rem Georgia, serif; color: #693149; margin-top: 2.6rem; }
+.mary-hero-photo { position: relative; min-height: clamp(520px, 47vw, 720px); background: #eee7e4; }
+.mary-photo-placeholder { height: 100%; min-height: inherit; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; color: #693149; background: #f3e4e9; text-align: center; padding: 2rem; }
+.mary-photo-placeholder span { font-size: 7rem; font-family: Georgia, serif; }
+.mary-benefits { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem 2rem; padding: 1.5rem; background: #f3e8ec; border-block: 1px solid #ead7df; }
+.mary-occasion-links { display: flex; flex-wrap: wrap; gap: .65rem; }
+.mary-occasion-links a { display: inline-flex; align-items: center; justify-content: space-between; gap: 1.5rem; min-height: 48px; padding: .7rem 1rem; border: 1px solid #e5d6dc; border-radius: 5px; color: #57454d; background: #fffaf7; transition: border-color .2s, background .2s; }
+.mary-occasion-links a:hover { border-color: #793b55; background: #fbf0f4; }
+.mary-product { background: #fffdfb; border-radius: 6px; border: 1px solid #eee4e4; }
+.mary-product h3 { line-height: 1.45; }
+a:focus-visible, button:focus-visible { outline: 2px solid #693149; outline-offset: 4px; }
+@media (max-width: 767px) {
+  .mary-hero { grid-template-columns: 1fr; }
+  .mary-hero-copy { padding: 2rem 1.25rem; }
+  .mary-hero h1 { font-size: clamp(2.25rem, 9vw, 3.5rem); }
+  .mary-hero-description { margin-top: 1rem; }
+  .mary-signature { margin-top: 1.5rem; font-size: 1.3rem; }
+  .mary-hero-photo { min-height: 0; aspect-ratio: 4 / 5; }
+  .mary-benefits { justify-content: flex-start; gap: 1rem; padding: 1.25rem; }
+  .mary-occasion-links { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .5rem; }
+  .mary-occasion-links a { flex-shrink: 0; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation-duration: 0s !important; } }
+
+.mary-footer { background: #352b31; }
+.mary-home .mary-product h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; }
+.mary-home > section:not(.mary-hero) { scroll-margin-top: 100px; }
+.mary-home section.bg-gray-50 { background: #f5eeed; }
+
+.mary-occasion-links-expanded { flex-wrap: wrap !important; }
+.mary-about { background: #f3e8ec; border-block: 1px solid #ead7df; }
+.mary-about h2 { margin-bottom: 1.5rem; }
+.mary-seasonal { position: relative; min-height: 340px; display: flex; align-items: center; }
+@media (max-width: 767px) {
+  .mary-hero { gap: 0; padding-bottom: 1.5rem; }
+  .mary-hero-copy { display: contents; }
+  .mary-hero-copy > .mary-eyebrow { order: 0; margin: 1.5rem 1.25rem .75rem; }
+  .mary-hero-copy > h1 { order: 1; margin: 0 1.25rem 1.5rem; }
+  .mary-hero-photo { order: 2; aspect-ratio: 1; }
+  .mary-hero-description { order: 3; margin: 1.25rem 1.25rem 0; }
+  .mary-hero-actions { order: 4; margin: 1.25rem 1.25rem 0; gap: 1rem; }
+  .mary-signature { order: 5; margin: 1rem 1.25rem 0; }
+}

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { DISTRICTS } from '@/lib/districts'
 import type { SiteSettings } from '@/lib/settings'
 import type { PageNav } from '@/lib/pages'
@@ -21,7 +22,7 @@ export default function Footer({ settings = {}, footerPages = [] }: Props) {
     : []
 
   return (
-    <footer className="bg-gray-900 text-gray-300 pt-12 pb-6 mt-20">
+    <footer className="mary-footer text-gray-300 pt-12 pb-6 mt-20">
       {/* Районы SEO */}
       <div className="max-w-7xl mx-auto px-4 mb-8">
         <p className="text-white font-semibold mb-3 text-sm">Доставка цветов по районам СПб</p>
@@ -40,7 +41,7 @@ export default function Footer({ settings = {}, footerPages = [] }: Props) {
 
       <div className="max-w-7xl mx-auto px-4 border-t border-gray-800 pt-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div>
-          <p className="text-white font-bold text-xl mb-3">{siteName}</p>
+          <Link href="/" aria-label={siteName} className="inline-block mb-4"><Image src="/brand/mary-horizontal-white.png" alt={`${siteName} — Ваш личный флорист`} width={240} height={100} className="w-56 h-auto" /></Link>
           <p className="text-sm leading-relaxed">
             Авторские букеты с доставкой по Санкт-Петербургу. Работаем ежедневно с 8:00 до 22:00.
           </p>

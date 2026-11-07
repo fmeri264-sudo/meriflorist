@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import sharp from 'sharp'
 
@@ -15,6 +15,8 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer())
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
   const uploadDir = join(process.cwd(), 'public', 'uploads')
+
+  await mkdir(uploadDir, { recursive: true })
 
   try {
     const converted = await sharp(buffer)
