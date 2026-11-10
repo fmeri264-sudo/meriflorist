@@ -11,6 +11,7 @@ export interface SiteSettings {
   heroButtonText: string
   heroButtonUrl: string
   homeSelectionTitle: string
+  homeSelectionConfig: string
   homeSeasonalImageUrl: string
   homeSeasonalTitle: string
   homeSeasonalLink: string
@@ -38,6 +39,7 @@ export const SETTING_DEFAULTS: SiteSettings = {
   heroButtonText: 'Выбрать букет',
   heroButtonUrl: '/catalog',
   homeSelectionTitle: 'Выбор Мэри',
+  homeSelectionConfig: '',
   homeSeasonalImageUrl: '',
   homeSeasonalTitle: 'Сезонное настроение',
   homeSeasonalLink: '/catalog',

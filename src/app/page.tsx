@@ -1,4 +1,5 @@
 import { getSettings } from '@/lib/settings'
+import { parseHomeSelection } from '@/lib/home-selection'
 import OccasionsList from '@/components/home/OccasionsList'
 import USPList from '@/components/home/USPList'
 import HeroSection from '@/components/home/HeroSection'
@@ -27,6 +28,14 @@ export default async function HomePage() {
 
   const topIds = new Set(topProducts.map(p => p.id))
   const allProducts = [...topProducts, ...pinnedProducts.filter(p => !topIds.has(p.id))]
+  const selection = parseHomeSelection(settings.homeSelectionConfig, settings.homeSelectionTitle)
+  const selectionPool = selection.visible && selection.pinnedProductIds.length
+    ? await getProducts({ productIds: selection.pinnedProductIds, limit: 4 }).catch(() => [])
+    : []
+  const selectionProducts = selection.pinnedProductIds.flatMap(id => {
+    const product = selectionPool.find(p => p.id === id && !p.isAddon)
+    return product ? [product] : []
+  })
 
   function getSection(sectionId: number, type: string, config: Record<string, unknown>) {
     if (type === 'reviews' || type === 'advantages' || type === 'blog') return []
@@ -50,7 +59,7 @@ export default async function HomePage() {
         <OccasionsList occasions={occasions} />
       </section>}
 
-      <ProductsSection title={settings.homeSelectionTitle || 'Выбор Мэри'} subtitle="Для особого повода и просто так" products={topProducts.filter(p => !p.isAddon).slice(0, 8)} linkUrl="/catalog" linkText="Все букеты →" />
+      {selection.visible && <ProductsSection title={selection.title} subtitle={selection.subtitle} products={selectionProducts} linkUrl="/catalog" linkText="Все букеты →" />}
 
       {settings.homeSeasonalImageUrl && <section className="max-w-7xl mx-auto px-4 py-8">
         <Link href={settings.homeSeasonalLink.startsWith('/') && !settings.homeSeasonalLink.startsWith('//') ? settings.homeSeasonalLink : '/catalog'} className="mary-seasonal rounded-lg overflow-hidden">

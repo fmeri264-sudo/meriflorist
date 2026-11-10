@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Check, X, Pin, PinOff } from 'lucide-react'
 import Image from 'next/image'
+import { HOME_SELECTION_ID, HOME_SELECTION_LIMIT } from '@/lib/home-selection'
 import Link from 'next/link'
 
 interface Section {
@@ -14,6 +15,7 @@ interface Section {
 interface Product {
   id: number; name: string; price: number; images: string[]
   sectionIds: number[]
+  isAddon: boolean; inStock: boolean; isVisible: boolean
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -25,6 +27,7 @@ export default function AdminSectionsPage() {
   const [sections, setSections] = useState<Section[]>([])
   const [editing, setEditing] = useState<Section | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   // Выбор товаров для секции
   const [pickingSection, setPickingSection] = useState<Section | null>(null)
@@ -34,9 +37,16 @@ export default function AdminSectionsPage() {
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/sections')
-    setSections(await res.json())
-    setLoading(false)
+    try {
+      setLoadError('')
+      const [res, selectionRes] = await Promise.all([fetch('/api/admin/sections'), fetch('/api/admin/home-selection')])
+      if (!res.ok || !selectionRes.ok) throw new Error('Не удалось загрузить блоки')
+      setSections([await selectionRes.json(), ...await res.json()])
+    } catch {
+      setLoadError('Не удалось загрузить блоки. Обновите страницу.')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -50,7 +60,7 @@ export default function AdminSectionsPage() {
     const all: Product[] = Array.isArray(data) ? data : (data.products ?? [])
     // Для управляемых блоков можно выбрать любой товар, независимо от его
     // текущей привязки к секциям главной страницы.
-    setPoolProducts(all)
+    setPoolProducts(s.id === HOME_SELECTION_ID ? all.filter(p => !p.isAddon && ((p.inStock && p.isVisible) || getPinned(s).includes(p.id))) : all)
     setLoadingProducts(false)
   }
 
@@ -59,31 +69,45 @@ export default function AdminSectionsPage() {
     return (s.config?.pinnedProductIds as number[]) ?? []
   }
 
+  async function updateSection(section: Section, data: object) {
+    const response = await fetch(section.id === HOME_SELECTION_ID ? '/api/admin/home-selection' : `/api/admin/sections/${section.id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}))
+      alert(result.error ?? 'Не удалось сохранить блок.')
+      return false
+    }
+    return true
+  }
+
   async function togglePin(product: Product) {
     if (!pickingSection) return
-    setSaving(true)
     const current = getPinned(pickingSection)
     const isPinned = current.includes(product.id)
+    if (pickingSection.id === HOME_SELECTION_ID && !isPinned && current.length >= HOME_SELECTION_LIMIT) {
+      alert('В «Выборе Мэри» можно выбрать только 4 товара. Сначала снимите выбор с одного из товаров.')
+      return
+    }
+    setSaving(true)
     const updated = isPinned ? current.filter(id => id !== product.id) : [...current, product.id]
 
-    await fetch(`/api/admin/sections/${pickingSection.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { ...pickingSection.config, pinnedProductIds: updated } }),
-    })
-    setPickingSection(prev => prev ? { ...prev, config: { ...prev.config, pinnedProductIds: updated } } : null)
-    setSections(prev => prev.map(s => s.id === pickingSection.id
-      ? { ...s, config: { ...s.config, pinnedProductIds: updated } }
-      : s
-    ))
-    setSaving(false)
+    try {
+      if (!await updateSection(pickingSection, { config: { ...pickingSection.config, pinnedProductIds: updated } })) return
+      setPickingSection(prev => prev ? { ...prev, config: { ...prev.config, pinnedProductIds: updated } } : null)
+      setSections(prev => prev.map(s => s.id === pickingSection.id
+        ? { ...s, config: { ...s.config, pinnedProductIds: updated } }
+        : s
+      ))
+    } catch {
+      alert('Не удалось связаться с сервером.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function toggle(s: Section) {
-    await fetch(`/api/admin/sections/${s.id}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visible: !s.visible }),
-    })
+    if (!await updateSection(s, { visible: !s.visible })) return
     load()
   }
 
@@ -104,14 +128,11 @@ export default function AdminSectionsPage() {
   async function saveEdit() {
     if (!editing) return
     const limit = Number(editing.config?.limit) || null
-    await fetch(`/api/admin/sections/${editing.id}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: editing.title, subtitle: editing.subtitle,
-        bannerUrl: editing.bannerUrl, linkUrl: editing.linkUrl, linkText: editing.linkText,
-        config: { ...editing.config, ...(limit ? { limit } : {}) },
-      }),
-    })
+    if (!await updateSection(editing, {
+      title: editing.title, subtitle: editing.subtitle,
+      bannerUrl: editing.bannerUrl, linkUrl: editing.linkUrl, linkText: editing.linkText,
+      config: { ...editing.config, limit: editing.id === HOME_SELECTION_ID ? 4 : limit ?? 0 },
+    })) return
     setEditing(null)
     load()
   }
@@ -141,6 +162,7 @@ export default function AdminSectionsPage() {
         </button>
       </div>
 
+      {loadError && <p role="alert" className="text-red-600 mb-4">{loadError}</p>}
       {loading ? <div className="text-gray-400">Загрузка...</div> : (
         <div className="space-y-2">
           {sections.sort((a, b) => a.sort - b.sort).map(s => (
@@ -158,19 +180,19 @@ export default function AdminSectionsPage() {
                       <input value={editing.subtitle ?? ''} onChange={e => setEditing({ ...editing, subtitle: e.target.value })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" />
                     </div>
-                    <div>
+                    {s.id !== HOME_SELECTION_ID && <div>
                       <label className="text-xs text-gray-500 mb-1 block">URL баннера (фото)</label>
                       <input value={editing.bannerUrl ?? ''} onChange={e => setEditing({ ...editing, bannerUrl: e.target.value })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
                         placeholder="https://..." />
-                    </div>
-                    <div>
+                    </div>}
+                    {s.id !== HOME_SELECTION_ID && <div>
                       <label className="text-xs text-gray-500 mb-1 block">Ссылка кнопки</label>
                       <input value={editing.linkUrl ?? ''} onChange={e => setEditing({ ...editing, linkUrl: e.target.value })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
                         placeholder="/catalog" />
-                    </div>
-                    {isProductSection(s) && (
+                    </div>}
+                    {isProductSection(s) && s.id !== HOME_SELECTION_ID && (
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Макс. карточек (0 = все)</label>
                         <input type="number" min={0}
@@ -189,13 +211,13 @@ export default function AdminSectionsPage() {
               ) : (
                 <div className="px-4 py-3 flex items-center gap-3">
                   <div className="flex flex-col gap-0.5">
-                    <button onClick={() => move(s, -1)} className="text-gray-300 hover:text-gray-600 transition"><ChevronUp size={14} /></button>
-                    <button onClick={() => move(s, 1)} className="text-gray-300 hover:text-gray-600 transition"><ChevronDown size={14} /></button>
+                    <button disabled={s.id === HOME_SELECTION_ID} onClick={() => move(s, -1)} className="text-gray-300 hover:text-gray-600 transition"><ChevronUp size={14} /></button>
+                    <button disabled={s.id === HOME_SELECTION_ID} onClick={() => move(s, 1)} className="text-gray-300 hover:text-gray-600 transition"><ChevronDown size={14} /></button>
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{s.title}</p>
                     <p className="text-xs text-gray-400">
-                      {TYPE_LABELS[s.type] ?? s.type}
+                      {s.id === HOME_SELECTION_ID ? 'Товары · максимум 4 · Все букеты → каталог' : TYPE_LABELS[s.type] ?? s.type}
                       {getPinned(s).length > 0 && <span className="text-pink-500"> · {getPinned(s).length} на главной</span>}
                     </p>
                   </div>
@@ -211,7 +233,7 @@ export default function AdminSectionsPage() {
                     {s.visible ? <Eye size={15} /> : <EyeOff size={15} />}
                   </button>
                   <button onClick={() => setEditing(s)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition"><Pencil size={15} /></button>
-                  <button onClick={() => remove(s.id, s.title)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"><Trash2 size={15} /></button>
+                  <button disabled={s.id === HOME_SELECTION_ID} onClick={() => remove(s.id, s.title)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"><Trash2 size={15} /></button>
                 </div>
               )}
 
@@ -222,7 +244,7 @@ export default function AdminSectionsPage() {
                     <div>
                       <p className="text-sm font-semibold text-gray-800">Выберите товары для главной</p>
                       <p className="text-xs text-gray-400">
-                        Пул: {poolProducts.length} товаров · Выбрано: {getPinned(pickingSection).length}
+                        Пул: {poolProducts.length} товаров · Выбрано: {getPinned(pickingSection).length}{s.id === HOME_SELECTION_ID ? ' из 4. Порядок показа — порядок выбора.' : ''}
                       </p>
                     </div>
                     <button onClick={() => setPickingSection(null)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg transition">
@@ -259,7 +281,7 @@ export default function AdminSectionsPage() {
                                 ) : <div className="w-full h-full bg-gray-100" />}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-gray-900 truncate">{p.name}</p>
+                                <p className="text-xs font-medium text-gray-900 truncate">{isPinned && s.id === HOME_SELECTION_ID ? `${getPinned(pickingSection).indexOf(p.id) + 1}. ` : ''}{p.name}</p>
                                 <p className="text-xs text-gray-400">{p.price.toLocaleString('ru')} ₽</p>
                               </div>
                               {isPinned
