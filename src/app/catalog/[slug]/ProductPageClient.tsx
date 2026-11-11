@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, Camera, Shield, RefreshCw, Star, Heart, Share2, Tag, ChevronDown } from 'lucide-react'
+import { ShoppingCart, Camera, Shield, RefreshCw, Star, Heart, Share2, Tag, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Product, Review } from '@/types'
 import { formatPrice } from '@/lib/utils'
 import { useCartStore } from '@/store/cart'
@@ -91,6 +91,7 @@ export default function ProductPageClient({ product, similar, boughtTogether = [
   }
 
   useEffect(() => {
+    setActiveImage(0)
     const favs: number[] = JSON.parse(localStorage.getItem('favorites') || '[]')
     setIsFav(favs.includes(product.id))
   }, [product.id])
@@ -133,7 +134,13 @@ export default function ProductPageClient({ product, similar, boughtTogether = [
       <div className="grid md:grid-cols-2 gap-12">
         {/* Gallery */}
         <div className="space-y-3">
-          <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50">
+          <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50"
+            role="region" aria-label="Фотографии товара" tabIndex={0}
+            onKeyDown={event => {
+              if (product.images.length < 2 || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+              event.preventDefault()
+              setActiveImage(index => (index + (event.key === 'ArrowLeft' ? -1 : 1) + product.images.length) % product.images.length)
+            }}>
             {product.images[activeImage] ? (
               <Image
                 src={product.images[activeImage]}
@@ -145,6 +152,20 @@ export default function ProductPageClient({ product, similar, boughtTogether = [
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-300 text-8xl">🌸</div>
+            )}
+            {product.images.length > 1 && (
+              <>
+                <button type="button" aria-label="Предыдущее фото"
+                  onClick={() => setActiveImage(index => (index - 1 + product.images.length) % product.images.length)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow flex items-center justify-center hover:bg-white focus-visible:outline-2 focus-visible:outline-rose-500">
+                  <ChevronLeft size={24} />
+                </button>
+                <button type="button" aria-label="Следующее фото"
+                  onClick={() => setActiveImage(index => (index + 1) % product.images.length)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow flex items-center justify-center hover:bg-white focus-visible:outline-2 focus-visible:outline-rose-500">
+                  <ChevronRight size={24} />
+                </button>
+              </>
             )}
             {/* Dimension badge */}
             {(product.width || product.height) && (
@@ -160,6 +181,9 @@ export default function ProductPageClient({ product, similar, boughtTogether = [
               {product.images.map((img, i) => (
                 <button
                   key={i}
+                  type="button"
+                  aria-label={`Показать фото ${i + 1}`}
+                  aria-pressed={activeImage === i}
                   onClick={() => setActiveImage(i)}
                   className={cn('relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-colors', {
                     'border-rose-500': activeImage === i,

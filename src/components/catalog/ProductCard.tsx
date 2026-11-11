@@ -12,11 +12,14 @@ import { useState, useEffect } from 'react'
 interface Props {
   product: Product
   variants?: Product[]
+  showPhotoDots?: boolean
 }
 
-export default function ProductCard({ product, variants = [] }: Props) {
+export default function ProductCard({ product, variants = [], showPhotoDots = false }: Props) {
   const { addItem } = useCartStore()
   const [isFav, setIsFav] = useState(false)
+  const [photo, setPhoto] = useState(0)
+  const activePhoto = product.images[photo] ? photo : 0
 
   useEffect(() => {
     const favs: number[] = JSON.parse(localStorage.getItem('favorites') || '[]')
@@ -59,11 +62,12 @@ export default function ProductCard({ product, variants = [] }: Props) {
       </button>
 
       {/* Image */}
+      <div className="relative">
       <Link href={`/catalog/${product.slug}`}>
         <div className="relative w-full aspect-[3/4] bg-gray-50 overflow-hidden">
-          {product.images[0] ? (
+          {product.images[activePhoto] ? (
             <Image
-              src={product.images[0]}
+              src={product.images[activePhoto]}
               alt={product.name}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -76,7 +80,7 @@ export default function ProductCard({ product, variants = [] }: Props) {
           )}
           {/* Dimension badge */}
           {hasDims && (
-            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs font-semibold px-2 py-1 rounded-lg backdrop-blur-sm">
+            <div className={cn('absolute right-2 bg-black/60 text-white text-xs font-semibold px-2 py-1 rounded-lg backdrop-blur-sm', showPhotoDots && product.images.length > 1 ? 'bottom-10' : 'bottom-2')}>
               {product.width && product.height
                 ? `${product.width} × ${product.height} см`
                 : product.width
@@ -86,6 +90,21 @@ export default function ProductCard({ product, variants = [] }: Props) {
           )}
         </div>
       </Link>
+      {showPhotoDots && product.images.length > 1 && (
+        <div role="group" aria-label={`Фотографии: ${product.name}`} className="absolute bottom-1 inset-x-2 z-10 flex justify-center flex-wrap">
+          {product.images.map((_, index) => (
+            <button key={index} type="button"
+              aria-label={`Показать фото ${index + 1}`}
+              aria-pressed={activePhoto === index}
+              onClick={() => setPhoto(index)}
+              className="p-2 rounded-full focus-visible:outline-2 focus-visible:outline-rose-500"
+            >
+              <span className={cn('block w-2 h-2 rounded-full ring-1 ring-black/20 shadow-sm', activePhoto === index ? 'bg-rose-500' : 'bg-white')} />
+            </button>
+          ))}
+        </div>
+      )}
+      </div>
 
       {/* Info */}
       <div className="p-3 sm:p-4">
