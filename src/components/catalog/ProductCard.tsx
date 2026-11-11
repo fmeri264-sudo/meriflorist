@@ -19,7 +19,8 @@ export default function ProductCard({ product, variants = [], showPhotoDots = fa
   const { addItem } = useCartStore()
   const [isFav, setIsFav] = useState(false)
   const [photo, setPhoto] = useState(0)
-  const activePhoto = product.images[photo] ? photo : 0
+  const previewImages = showPhotoDots ? product.images.slice(0, 4) : product.images
+  const activePhoto = previewImages[photo] ? photo : 0
 
   useEffect(() => {
     const favs: number[] = JSON.parse(localStorage.getItem('favorites') || '[]')
@@ -92,11 +93,12 @@ export default function ProductCard({ product, variants = [], showPhotoDots = fa
       </Link>
       {showPhotoDots && product.images.length > 1 && (
         <div role="group" aria-label={`Фотографии: ${product.name}`} className="absolute bottom-1 inset-x-2 z-10 flex justify-center flex-wrap">
-          {product.images.map((_, index) => (
+          {previewImages.map((_, index) => (
             <button key={index} type="button"
               aria-label={`Показать фото ${index + 1}`}
               aria-pressed={activePhoto === index}
               onClick={() => setPhoto(index)}
+              onMouseEnter={() => setPhoto(index)}
               className="p-2 rounded-full focus-visible:outline-2 focus-visible:outline-rose-500"
             >
               <span className={cn('block w-2 h-2 rounded-full ring-1 ring-black/20 shadow-sm', activePhoto === index ? 'bg-rose-500' : 'bg-white')} />
