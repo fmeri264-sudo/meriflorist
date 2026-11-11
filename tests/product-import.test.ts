@@ -1,55 +1,72 @@
-import { test, afterEach } from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import * as XLSX from 'xlsx'
-import { NextRequest } from 'next/server'
-import { POST } from '../src/app/api/admin/import/[type]/route'
+import { importProduct } from '../src/lib/import-product'
 
-const originalFetch = globalThis.fetch
-afterEach(() => { globalThis.fetch = originalFetch })
-
-function request(rows: object[]) {
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), 'Товары')
-  const form = new FormData()
-  form.append('file', new Blob([new Uint8Array(XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }))]), 'products.xlsx')
-  return new NextRequest('http://localhost/api/admin/import/products', { method: 'POST', body: form })
+function database() {
+  const rows: Record<string, unknown>[] = [{id:674,sku:'OTHER',slug:'other',name:'Другой товар'}]
+  let nextId = 900
+  const writes: {method:string;payload:Record<string,unknown>}[] = []
+  const request = async (path: string, init?: RequestInit) => {
+    const url = new URL(path,'https://example.test/')
+    if (!init?.method) {
+      const key = ['sku','id','slug'].find(key=>url.searchParams.has(key))!
+      const value = url.searchParams.get(key)!.slice(3)
+      return Response.json(rows.filter(row=>String(row[key])===value))
+    }
+    const payload = JSON.parse(String(init.body))
+    assert.equal(Object.hasOwn(payload,'id'),false)
+    writes.push({method:init.method,payload})
+    if(init.method==='POST') {const row={...payload,id:nextId++};rows.push(row);return Response.json([row],{status:201})}
+    const row=rows.find(row=>String(row.id)===url.searchParams.get('id')!.slice(3))!
+    Object.assign(row,payload)
+    return Response.json([row])
+  }
+  return {rows,writes,request}
 }
 
-test('existing IDs only update; missing IDs never insert; blank IDs use database defaults', async () => {
-  const writes: {method: string; url: string; payload: Record<string, unknown>}[] = []
-  globalThis.fetch = async (input, init) => {
-    const url = String(input)
-    if (!init?.method) return Response.json([{id:1,name:'Розы'}])
-    const payload = JSON.parse(String(init.body))
-    writes.push({method:init.method,url,payload})
-    assert.equal(Object.hasOwn(payload,'id'),false)
-    if (init.method === 'PATCH') return Response.json(url.includes('id=eq.10&') ? [{id:10}] : [])
-    assert.equal(init.method,'POST')
-    assert.equal(url.includes('on_conflict'),false)
-    return new Response(null,{status:201})
-  }
-  const response = await POST(request([
-    {ID:10,Название:'Обновление'}, {ID:50000,Название:'Несуществующий'}, {ID:'',Название:'Новый'},
-    {ID:'abc',Название:'Неверный ID'}, {ID:1.5,Название:'Дробный ID'},
-  ]),{params:Promise.resolve({type:'products'})})
-  const result = await response.json()
-  assert.equal(result.updated,1)
-  assert.equal(result.created,1)
-  assert.equal(result.errors,3)
-  assert.equal(writes.filter(w=>w.method==='POST').length,1)
-  assert.match(result.errorDetails.join(' '),/очистите ID/)
+test('new Excel ID creates with database ID; repeated import matches SKU without duplicates',async()=>{
+  const db=database()
+  const row={id:675,sku:'ЛВ0726',slug:'lavanda',name:'Лаванда',price:100}
+  assert.equal(await importProduct(row,db.request),'created')
+  assert.equal(db.rows[1].id,900)
+  assert.equal(await importProduct({...row,price:200},db.request),'updated')
+  assert.equal(db.rows.length,2)
+  assert.equal(db.rows[1].price,200)
 })
 
-test('a failed update is counted as an error without falling back to insert', async () => {
-  let posts = 0
-  globalThis.fetch = async (_input, init) => {
-    if (!init?.method) return Response.json([{id:1,name:'Розы'}])
-    if(init.method==='POST') posts++
-    return Response.json({error:'failed'},{status:500})
-  }
-  const response = await POST(request([{ID:10,Название:'Товар'}]),{params:Promise.resolve({type:'products'})})
-  const result = await response.json()
-  assert.equal(result.updated,0)
-  assert.equal(result.errors,1)
-  assert.equal(posts,0)
+test('Excel ID collision never overwrites a different SKU',async()=>{
+  const db=database()
+  assert.equal(await importProduct({id:674,sku:'ЛВ0725',slug:'new',name:'Новый'},db.request),'created')
+  assert.equal(db.rows[0].name,'Другой товар')
+  assert.equal(db.rows[1].id,900)
+})
+
+test('existing SKU wins over stale Excel ID',async()=>{
+  const db=database()
+  assert.equal(await importProduct({id:50000,sku:'OTHER',slug:'other',name:'Обновление'},db.request),'updated')
+  assert.equal(db.rows.length,1)
+  assert.equal(db.rows[0].name,'Обновление')
+})
+
+test('blank ID and SKU match by URL on repeated import',async()=>{
+  const db=database()
+  const row={sku:null,slug:'new',name:'Новый'}
+  assert.equal(await importProduct(row,db.request),'created')
+  assert.equal(await importProduct(row,db.request),'updated')
+  assert.equal(db.rows.length,2)
+})
+
+test('conflicting SKU and URL report an error without overwriting',async()=>{
+  const db=database()
+  await assert.rejects(importProduct({id:675,sku:'NEW',slug:'other'},db.request),/другим артикулом/)
+  assert.equal(db.writes.length,0)
+})
+
+test('failed identity lookup never falls back to insertion',async()=>{
+  let writes=0
+  await assert.rejects(importProduct({sku:'NEW'},async(_path,init)=>{
+    if(init?.method) writes++
+    return Response.json({}, {status:503})
+  }),/проверить/)
+  assert.equal(writes,0)
 })

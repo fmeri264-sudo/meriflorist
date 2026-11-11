@@ -85,19 +85,19 @@ export default function ExcelIO({ type, onImported, importDisabled, importLabel 
       )}
 
       {type === 'products' && !importDisabled && (
-        <p className="w-full text-xs text-gray-500">В Excel: ID указан — обновление существующего товара; ID пустой — создание нового. Не задавайте ID новым товарам.</p>
+        <p className="w-full text-xs text-gray-500">Товары сопоставляются по артикулу, затем по ID и URL. Новым товарам база назначает внутренний ID автоматически; номер из Excel не переносится.</p>
       )}
 
       {/* Результат */}
       {result && (
         <div className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${
-          result.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+          result.ok ? (result.errors ? 'bg-amber-50 text-amber-800' : 'bg-green-50 text-green-700') : 'bg-red-50 text-red-600'
         }`}>
-          {result.ok
+          {result.ok && !result.errors
             ? <CheckCircle size={14} />
             : <AlertCircle size={14} />}
           {result.ok
-            ? `Готово: ${[
+            ? `${result.errors ? 'Импорт завершён с ошибками' : 'Готово'}: ${[
                 result.created ? `создано ${result.created}` : '',
                 result.updated ? `обновлено ${result.updated}` : '',
                 result.errors ? `ошибок ${result.errors}` : '',
