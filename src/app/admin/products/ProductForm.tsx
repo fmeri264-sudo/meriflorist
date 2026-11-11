@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, ArrowLeft, Upload } from 'lucide-react'
+import { Plus, ArrowLeft, Upload } from 'lucide-react'
 import { DISTRICTS } from '@/lib/districts'
+import ProductImages from '@/components/admin/ProductImages'
 
 interface Category {
   id: number
@@ -129,10 +130,6 @@ export default function ProductForm({ initialData, productId }: Props) {
     if (!url) return
     setForm(f => ({ ...f, images: [...f.images, url] }))
     setNewImage('')
-  }
-
-  function removeImage(i: number) {
-    setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -359,21 +356,7 @@ export default function ProductForm({ initialData, productId }: Props) {
         <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
           <h2 className="font-semibold text-gray-800">Фотографии</h2>
 
-          {form.images.length > 0 && (
-            <div className="flex flex-wrap gap-3">
-              {form.images.map((url, i) => (
-                <div key={i} className="relative group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" width={80} height={80}
-                    className="rounded-lg object-cover border border-gray-100 w-20 h-20" />
-                  <button type="button" onClick={() => removeImage(i)}
-                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition">
-                    <Trash2 size={10} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <ProductImages images={form.images} onChange={images => set('images', images)} />
 
           <div className="flex gap-2">
             <input
