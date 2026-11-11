@@ -49,13 +49,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
     const categories: { id: number; name: string }[] = await sbGet('Category?select=id,name')
     const catMap = new Map(categories.map(c => [c.name.toLowerCase().trim(), c.id]))
 
-    const toUpsert: Record<string, unknown>[] = []
+    const toUpdate: Record<string, unknown>[] = []
     const toCreate: Record<string, unknown>[] = []
     let errors = 0
+    const errorDetails: string[] = []
 
     for (const row of rows) {
       try {
-        const id = num(row['ID'])
+        const idText = str(row['ID'])
+        const id = idText ? Number(idText) : 0
+        if (idText && (!Number.isSafeInteger(id) || id <= 0)) {
+          errors++
+          errorDetails.push(`Некорректный ID «${idText}»: для нового товара оставьте ID пустым.`)
+          continue
+        }
         const name = str(row['Название'])
         if (!name) continue
 
@@ -94,7 +101,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
         }
 
         if (id > 0) {
-          toUpsert.push({ ...payload, id })
+          toUpdate.push({ ...payload, id })
         } else {
           toCreate.push(payload)
         }
@@ -103,26 +110,49 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
       }
     }
 
-    // Батчевый upsert по 200 штук одним запросом
-    const BATCH = 200
+    // ID from Excel identifies an existing row only. Never insert explicit IDs:
+    // PostgreSQL sequences do not advance when an explicit ID is inserted.
     let updated = 0
-    for (let i = 0; i < toUpsert.length; i += BATCH) {
-      const batch = toUpsert.slice(i, i + BATCH)
-      const res = await fetch(`${SB}/rest/v1/Product?on_conflict=id`, {
-        method: 'POST',
-        headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify(batch),
-      })
-      if (res.ok) updated += batch.length; else errors += batch.length
+    const BATCH = 10
+    for (let i = 0; i < toUpdate.length; i += BATCH) {
+      const results = await Promise.all(toUpdate.slice(i, i + BATCH).map(async product => {
+        const { id, ...payload } = product
+        try {
+          const res = await fetch(`${SB}/rest/v1/Product?id=eq.${id}&select=id`, {
+            method: 'PATCH', headers: { ...h, Prefer: 'return=representation' },
+            body: JSON.stringify(payload),
+          })
+          if (!res.ok) return { error: `Не удалось обновить товар ID ${id}.` }
+          const records = await res.json()
+          return Array.isArray(records) && records.length === 1
+            ? { updated: true }
+            : { error: `Товар ID ${id} не найден. Для создания нового товара очистите ID в Excel.` }
+        } catch {
+          return { error: `Ошибка связи при обновлении ID ${id}. Проверьте товар перед повторным импортом.` }
+        }
+      }))
+      for (const result of results) {
+        if (result.updated) updated++
+        else { errors++; errorDetails.push(result.error!) }
+      }
     }
 
     let created = 0
     for (const payload of toCreate) {
-      const res = await sbPost('Product', payload)
-      if (res.ok) created++; else errors++
+      try {
+        const res = await sbPost('Product', payload)
+        if (res.ok) created++
+        else {
+          errors++
+          errorDetails.push(`Не удалось создать товар «${payload.name}». Проверьте уникальность URL и артикул.`)
+        }
+      } catch {
+        errors++
+        errorDetails.push(`Ошибка связи при создании «${payload.name}». Проверьте каталог перед повторным импортом.`)
+      }
     }
 
-    return NextResponse.json({ ok: true, created, updated, errors, total: rows.length })
+    return NextResponse.json({ ok: true, created, updated, errors, total: rows.length, errorDetails: errorDetails.slice(0, 20) })
   }
 
   // ── Покупатели ────────────────────────────────────────────────────────────
